@@ -12,6 +12,9 @@ import com.aswin.Write.Your.Thought.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -38,6 +41,7 @@ public class BlogService {
         return getBlogResponse(blogRepository.save(blog));
     }
     @Transactional
+    @CachePut(value="blogs",key="#updateBlogRequest.blogId")
     public BlogResponse updateBlog(UpdateBlogRequest updateBlogRequest,String userName) {
         Blog blog=blogRepository.findById(updateBlogRequest.getBlogId()).
                 orElseThrow(()->new RecordNotFoundException("No blog found in database"));
@@ -47,7 +51,7 @@ public class BlogService {
         blog.setUpdatedAt(LocalDateTime.now());
         return getBlogResponse(blogRepository.save(blog));
     }
-
+    @Cacheable(value = "blogs",key="#id")
     public BlogResponse searchBlog(Long id) {
         Blog blog = blogRepository.findById(id).orElseThrow(() ->
                 new RecordNotFoundException("Blog not present in database"));
@@ -61,6 +65,8 @@ public class BlogService {
         return blogs.stream()
                 .map(this::getBlogResponse).toList();
     }
+
+    @CacheEvict(value = "blogs",key="id")
     public Object deleteBlog(Long id, String username) {
         Blog blog=blogRepository.findById(id).orElseThrow
                 (()->new RecordNotFoundException("no blogs found with the id"));
@@ -69,6 +75,7 @@ public class BlogService {
         blogRepository.delete(blog);
         return "bolg deleted";
     }
+
     private BlogResponse getBlogResponse(Blog blog) {
         BlogResponse blogResponse=new BlogResponse();
         BeanUtils.copyProperties(blog,blogResponse);
